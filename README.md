@@ -44,6 +44,7 @@ Session earnings tracker for TBC Classic. Every loot drop valued against TSM, Au
 | **Wick's Beasts and Things** | [repo](https://github.com/Wicksmods/WicksBeastsAndThings) | [CurseForge](https://www.curseforge.com/wow/addons/wicks-beasts-and-things) |
 | **Wick's Stances and Things** | [repo](https://github.com/Wicksmods/WicksStancesAndThings) | [CurseForge](https://www.curseforge.com/wow/addons/wicks-stances-and-things) |
 | **Wick's Conjures and Things** | [repo](https://github.com/Wicksmods/WicksConjuresAndThings) | [CurseForge](https://www.curseforge.com/wow/addons/wicks-conjures-and-things) |
+| **Wick's Poisons and Things** | [repo](https://github.com/Wicksmods/WicksPoisonsAndThings) | [CurseForge](https://www.curseforge.com/wow/addons/wicks-poisons-and-things) |
 | **Wick's Bags** | [repo](https://github.com/Wicksmods/WicksBags) | [CurseForge](https://www.curseforge.com/wow/addons/wicks-bags) |
 | **Wick's Trade Hall** | [repo](https://github.com/Wicksmods/WicksTradeHall) | [CurseForge](https://www.curseforge.com/wow/addons/trade-hall) |
 | **Wick's Gear** | [repo](https://github.com/Wicksmods/WicksGear) | [CurseForge](https://www.curseforge.com/wow/addons/wicks-gear) |
