@@ -189,9 +189,13 @@ local function BuildBar()
     bar:SetMovable(true)
     bar:EnableMouse(true)
     bar:RegisterForDrag("LeftButton")
-    bar:SetScript("OnDragStart", function(self) self:StartMoving() end)
+    bar:SetScript("OnDragStart", function(self)
+        WicksSnap.Detach("ledger_bar")
+        self:StartMoving()
+    end)
     bar:SetScript("OnDragStop", function(self)
         self:StopMovingOrSizing()
+        WicksSnap.TrySnap("ledger_bar")
         SavePos("barPos", self)
     end)
     bar:SetFrameStrata("MEDIUM")
@@ -304,6 +308,7 @@ local function BuildBar()
         end
     end)
 
+    WicksSnap.Register("ledger_bar", bar)
     bar:Hide()
 end
 
@@ -321,9 +326,13 @@ local function BuildPanel()
     panel:SetResizable(true)
     panel:EnableMouse(true)
     panel:RegisterForDrag("LeftButton")
-    panel:SetScript("OnDragStart", function(self) self:StartMoving() end)
+    panel:SetScript("OnDragStart", function(self)
+        WicksSnap.Detach("ledger_panel")
+        self:StartMoving()
+    end)
     panel:SetScript("OnDragStop", function(self)
         self:StopMovingOrSizing()
+        WicksSnap.TrySnap("ledger_panel")
         SavePos("panelPos", self)
     end)
 
@@ -529,6 +538,7 @@ local function BuildPanel()
     end)
     grip:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
+    WicksSnap.Register("ledger_panel", panel)
     panel:Hide()
 end
 
@@ -549,9 +559,13 @@ local function BuildOptions()
     optPanel:SetMovable(true)
     optPanel:EnableMouse(true)
     optPanel:RegisterForDrag("LeftButton")
-    optPanel:SetScript("OnDragStart", function(self) self:StartMoving() end)
+    optPanel:SetScript("OnDragStart", function(self)
+        WicksSnap.Detach("ledger_opt")
+        self:StartMoving()
+    end)
     optPanel:SetScript("OnDragStop", function(self)
         self:StopMovingOrSizing()
+        WicksSnap.TrySnap("ledger_opt")
         SavePos("optPos", self)
     end)
 
@@ -783,6 +797,7 @@ local function BuildOptions()
         RefreshHardBtn()
     end)
 
+    WicksSnap.Register("ledger_opt", optPanel)
     optPanel:Hide()
 end
 
@@ -1220,9 +1235,5 @@ WL:On("LOGIN", function()
     end
     if WL.db.panelShown then
         UI:OpenPanel()
-    end
-    if WL.db.optShown then
-        if not optPanel then BuildOptions() end
-        optPanel:Show()
     end
 end)

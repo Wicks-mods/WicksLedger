@@ -9,5 +9,6 @@
 Core.lua
 Prices.lua
 Session.lua
+WicksSnap.lua
 UI.lua
 Minimap.lua
