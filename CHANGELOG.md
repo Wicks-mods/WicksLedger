@@ -1,5 +1,12 @@
 # Changelog -- Wick's Ledger
 
+## 0.2.6 - 2026-10-01
+
+### Fixed
+
+- Loads on the 2.5.6 client without being marked out of date. The addon
+  now lists interface 20506 alongside 20505.
+
 ## 0.2.5 -- 2026-05-15
 
 - Fix panel not opening. Item rows were created as Frame instead of Button, so mouse events including right-click and tooltip hover were never firing.

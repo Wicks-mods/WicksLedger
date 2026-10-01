@@ -1,8 +1,8 @@
-## Interface: 20505
+## Interface: 20505, 20506
 ## Title: Wick's Ledger
 ## Notes: session earnings tracker -- loot, raw gold, and ah-valued item drops in one slim panel
 ## Author: Wick
-## Version: 0.2.5
+## Version: 0.2.6
 ## SavedVariables: WicksLedgerDB
 ## SavedVariablesPerCharacter: WicksLedgerCharDB
 
