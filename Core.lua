@@ -1,12 +1,49 @@
 -- Wick's Ledger
--- Core.lua: namespace, saved variables, event dispatch
+-- Core.lua: WickCore addon object, saved variables, event dispatch
 
 local ADDON, ns = ...
+
+local Core = WickCore
+if not Core then
+    -- WickCore is missing or switched off.
+    --
+    -- The TOC asks for it with OptionalDeps rather than Dependencies on
+    -- purpose. A hard dependency makes the client refuse to load this addon
+    -- at all, so nothing of ours runs and the player is told nothing beyond
+    -- a greyed line in the AddOns list. Loading anyway lets us say what is
+    -- wrong and where to get it.
+    --
+    -- One line for the lot of them, not one per addon: with the whole suite
+    -- installed and WickCore switched off, a line each would be a wall.
+    local need = _G.WicksNeedCore
+    if not need then
+        need = {}
+        _G.WicksNeedCore = need
+        local f = CreateFrame("Frame")
+        f:RegisterEvent("PLAYER_LOGIN")
+        f:SetScript("OnEvent", function()
+            table.sort(need)
+            print(("|cff4FC778Wick's Mods|r: %s %s WickCore, which is not installed or not switched on. It is in the same download as the rest of the suite: |cffD4C8A1wicksmods.com|r")
+                :format(table.concat(need, ", "), #need == 1 and "needs" or "need"))
+        end)
+    end
+    need[#need + 1] = "Wick's Ledger"
+    return
+end
+local Chrome = Core.Chrome
+
 WicksLedger = WicksLedger or {}
 local WL = WicksLedger
 ns.WL = WL
 
-WL.version = "0.2.1"
+-- No saved variable through WickCore: WicksLedgerDB and the character
+-- table stay as they are. The version is the TOC's, read once.
+local A = Core:NewAddon("WicksLedger", {
+    title   = "Wick's Ledger",
+    version = (C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetadata)(ADDON, "Version"),
+})
+WL.A = A
+WL.version = A.version or "0.2.6"
 
 -- ============================================================
 -- DEFAULTS
@@ -144,12 +181,12 @@ SlashCmdList.WICKSLEDGER = function(input)
         if WL.Session and WL.Session.Reset then WL.Session:Reset() end
     elseif cmd == "auto" then
         WL.db.autoMode = not WL.db.autoMode
-        print(string.format("|cff4FC778Wick's Ledger|r: auto mode %s", WL.db.autoMode and "on" or "off"))
+        A:Print(string.format("auto mode %s", WL.db.autoMode and "on" or "off"))
     elseif cmd == "lock" then
         WL.db.hardLock = not WL.db.hardLock
-        print(string.format("|cff4FC778Wick's Ledger|r: hard lock %s", WL.db.hardLock and "on -- session persists across instance resets" or "off"))
+        A:Print(string.format("hard lock %s", WL.db.hardLock and "on -- session persists across instance resets" or "off"))
     elseif cmd == "help" or cmd == "?" then
-        print("|cff4FC778Wick's Ledger|r commands:")
+        A:Print("commands:")
         print("  /wledger            toggle panel")
         print("  /wledger start      start session manually")
         print("  /wledger stop       stop session manually")
@@ -159,4 +196,39 @@ SlashCmdList.WICKSLEDGER = function(input)
     else
         if WL.UI and WL.UI.Toggle then WL.UI:Toggle() end
     end
+end
+
+-- ============================================================
+-- WICKCORE OPTIONS PAGE AND LAUNCHER LINE
+-- ============================================================
+function A:OnEnable()
+    self:RegisterOptions(function(body)
+        local O = Core.Options
+        local y = 0
+        y = O:Note(body, "What a session earned: loot, raw gold and auction-valued drops, on a slim bar with an itemised panel behind it.", y)
+        y = O:Heading(body, "Sessions", y)
+        y = O:Check(body, "Start a session when you enter an instance",
+            function() return WL.db and WL.db.autoMode end,
+            function(v) if WL.db then WL.db.autoMode = v and true or false end end, y)
+        y = O:Check(body, "Hard lock: a zone change never ends the session",
+            function() return WL.db and WL.db.hardLock end,
+            function(v) if WL.db then WL.db.hardLock = v and true or false end end, y)
+        y = O:Heading(body, "Minimap", y)
+        y = O:Check(body, "Minimap button",
+            function() return WL.db and not WL.db.minimap.hide end,
+            function(v)
+                if WL.db and (not v) ~= WL.db.minimap.hide and WL.Minimap and WL.Minimap.Toggle then WL.Minimap:Toggle() end
+            end, y)
+        y = O:Heading(body, "Windows", y)
+        y = O:Button(body, "Open the ledger", function() if WL.UI and WL.UI.Toggle then WL.UI:Toggle() end end, y, 160)
+        y = O:Button(body, "Open the ledger's settings", function() if WL.UI and WL.UI.ToggleOptions then WL.UI:ToggleOptions() end end, y, 200)
+        y = O:Note(body, "The price source, junk handling and the rest are in the ledger's own settings window.", y)
+    end)
+    self:RegisterLauncher({
+        onClick = function() if WL.UI and WL.UI.Toggle then WL.UI:Toggle() end end,
+        tooltip = function(tt)
+            tt:AddLine(Chrome:TitleMarkup("Wick's Ledger"))
+            tt:AddLine("Session earnings. Click for the ledger.", 1, 1, 1)
+        end,
+    })
 end

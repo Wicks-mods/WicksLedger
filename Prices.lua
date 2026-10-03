@@ -2,6 +2,7 @@
 -- Prices.lua: item valuation chain -- TSM > Auctionator > Auctioneer > vendor
 
 local ADDON, ns = ...
+if not WickCore then return end   -- said once in Core.lua
 local WL = WicksLedger
 WL.Prices = WL.Prices or {}
 local P = WL.Prices

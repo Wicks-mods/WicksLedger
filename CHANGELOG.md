@@ -1,5 +1,24 @@
 # Changelog -- Wick's Ledger
 
+## Unreleased
+
+### Added
+
+- The bar, the panel and the settings window draw in WickCore's chrome:
+  colours, borders and corner marks come from the look and theme chosen
+  under Wick's Mods in the game's Options, and follow a change at once.
+  The look's font too.
+- A page under Wick's Mods: auto-start, hard lock, the minimap button, and
+  buttons to the ledger and its settings. The suite's launcher opens the
+  ledger.
+- Chat lines carry the theme's accent colour.
+
+### Changed
+
+- Wick's Ledger now needs WickCore, which is in the same download as the
+  rest of the suite. Without it the addon says so once at login and does
+  nothing else. Your settings and history are untouched.
+
 ## 0.2.6 - 2026-10-01
 
 ### Fixed

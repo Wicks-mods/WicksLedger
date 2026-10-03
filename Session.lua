@@ -2,6 +2,7 @@
 -- Session.lua: session lifecycle, loot tracking, gold delta, persist/restore, history
 
 local ADDON, ns = ...
+if not WickCore then return end   -- said once in Core.lua
 local WL = WicksLedger
 WL.Session = WL.Session or {}
 local S = WL.Session
@@ -197,7 +198,7 @@ function S:Start()
 
     PersistActive()
     if WL.UI and WL.UI.OnSessionStart then WL.UI:OnSessionStart() end
-    print(string.format("|cff4FC778Wick's Ledger|r: session started in %s", S.zoneName or "?"))
+    WL.A:Print(string.format("session started in %s", S.zoneName or "?"))
 end
 
 function S:Stop()
@@ -212,7 +213,7 @@ function S:Stop()
     CommitToHistory()
     PersistActive()   -- clears activeSession
     if WL.UI and WL.UI.OnSessionStop then WL.UI:OnSessionStop() end
-    print(string.format("|cff4FC778Wick's Ledger|r: session ended -- %s earned",
+    WL.A:Print(string.format("session ended -- %s earned",
         WL.Prices and WL.Prices:FormatCopper(S.totalCopper) or "?"))
 end
 
@@ -242,7 +243,7 @@ end
 WL:On("LOGIN", function()
     RestoreActive()
     if S.active then
-        print(string.format("|cff4FC778Wick's Ledger|r: session resumed in %s (%s elapsed)",
+        WL.A:Print(string.format("session resumed in %s (%s elapsed)",
             S.zoneName or "?",
             (function()
                 local e = S:Elapsed()
@@ -285,7 +286,7 @@ WL:On("ZONE", function(isInstance, instanceType)
             S.active = false
             PersistActive()
             if WL.UI and WL.UI.OnSessionStop then WL.UI:OnSessionStop() end
-            print("|cff4FC778Wick's Ledger|r: session paused (hard lock -- re-enter to resume)")
+            WL.A:Print("session paused (hard lock -- re-enter to resume)")
         else
             S:Stop()
         end

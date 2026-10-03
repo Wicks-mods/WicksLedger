@@ -1,3 +1,4 @@
+if not WickCore then return end   -- said once in Core.lua
 -- WicksSnap.lua
 -- Shared snap-to-frame system for the Wick suite.
 -- Drop this file into any Wick addon and add it to the TOC before UI.lua.

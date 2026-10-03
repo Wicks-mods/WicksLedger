@@ -2,6 +2,7 @@
 -- UI.lua: slim bar + independent itemized panel + options
 
 local ADDON, ns = ...
+if not WickCore then return end   -- said once in Core.lua
 local WL = WicksLedger
 WL.UI = WL.UI or {}
 local UI = WL.UI
@@ -21,12 +22,15 @@ local TAB_H       = 20
 local FOOTER_H    = 30
 local PAD         = 8
 
--- Wick brand palette
-local C_BG      = { 0.051, 0.039, 0.078, 0.97 }
-local C_HEADER  = { 0.090, 0.067, 0.141, 1 }
-local C_BORDER  = { 0.220, 0.188, 0.345, 1 }
-local C_GREEN   = { 0.310, 0.780, 0.471, 1 }
-local C_TEXT    = { 0.831, 0.784, 0.631, 1 }
+-- Palette: tokens are references into Chrome.Colors, never copies, so a
+-- look or theme change repaints every panel at once. The dim label colour
+-- is the addon's own.
+local Chrome    = WickCore.Chrome
+local C_BG      = Chrome.Colors.voidBG
+local C_HEADER  = Chrome.Colors.shadow
+local C_BORDER  = Chrome.Colors.border
+local C_GREEN   = Chrome.Colors.fel
+local C_TEXT    = Chrome.Colors.text
 local C_DIM     = { 0.42,  0.35,  0.54,  1 }
 
 -- ============================================================
@@ -34,39 +38,46 @@ local C_DIM     = { 0.42,  0.35,  0.54,  1 }
 -- Rule: BACKGROUND textures go on a bg child frame.
 --       FontStrings go on the parent (no bg texture on parent).
 --       BORDER/ARTWORK textures on parent are fine -- only BACKGROUND blocks text.
+-- A colour set on a region after it was made is remembered by Chrome, so
+-- a theme change finds it; a colour that is not a token is left alone.
 -- ============================================================
-local function MakeBgChild(parent, r, g, b, a)
+local function Ink(fs, c, a)
+    fs:SetTextColor(c[1], c[2], c[3], a or c[4] or 1)
+    Chrome:Register(fs, c, "text", a)
+end
+local function Paint(tex, c, a)
+    tex:SetColorTexture(c[1], c[2], c[3], a or c[4] or 1)
+    Chrome:Register(tex, c, "texture", a)
+end
+local function Tint(tex, c, a)
+    tex:SetVertexColor(c[1], c[2], c[3], a or c[4] or 1)
+    Chrome:Register(tex, c, "vertex", a)
+end
+
+local function MakeBgChild(parent, c, a)
     local f = CreateFrame("Frame", nil, parent)
     f:SetAllPoints(parent)
     local lvl = parent:GetFrameLevel()
     f:SetFrameLevel(lvl > 0 and lvl - 1 or 0)
     local t = f:CreateTexture(nil, "BACKGROUND")
-    t:SetAllPoints(); t:SetColorTexture(r, g, b, a)
+    t:SetAllPoints()
+    Paint(t, c, a)
     return f
 end
 
-local function AddBorder(f)
-    for _, args in ipairs({
-        {"TOPLEFT","TOPRIGHT",nil,1},{"BOTTOMLEFT","BOTTOMRIGHT",nil,1},
-        {"TOPLEFT","BOTTOMLEFT",1,nil},{"TOPRIGHT","BOTTOMRIGHT",1,nil},
-    }) do
-        local e = f:CreateTexture(nil, "BORDER")
-        e:SetColorTexture(C_BORDER[1], C_BORDER[2], C_BORDER[3], 1)
-        e:SetPoint(args[1]); e:SetPoint(args[2])
-        if args[3] then e:SetWidth(args[3]) end
-        if args[4] then e:SetHeight(args[4]) end
-    end
-end
+-- The border and the corner marks are the look's: a 1px line and fel
+-- brackets in the flat styles, a ring in the textured ones.
+local function AddBorder(f) Chrome:AddBorder(f) end
+local function AddCornerAccents(f) Chrome:AddBrackets(f) end
 
-local function AddCornerAccents(f)
-    for _, p in ipairs({"TOPLEFT","TOPRIGHT","BOTTOMLEFT","BOTTOMRIGHT"}) do
-        local h = f:CreateTexture(nil, "BORDER")
-        h:SetColorTexture(C_GREEN[1], C_GREEN[2], C_GREEN[3], 1)
-        h:SetPoint(p, f, p); h:SetSize(10, 2)
-        local v = f:CreateTexture(nil, "BORDER")
-        v:SetColorTexture(C_GREEN[1], C_GREEN[2], C_GREEN[3], 1)
-        v:SetPoint(p, f, p); v:SetSize(2, 10)
-    end
+-- One corner mark drawn on `host` at a corner of `rel`: the header and
+-- footer carry the panel's marks so they draw above their own backgrounds.
+-- Drawn only where the look draws marks at all.
+local function Bracket(host, anchor, rel)
+    if Chrome:Modern() or Chrome:Corners() == "none" then return end
+    local B = Chrome.BRACKET
+    local h = Chrome:Texture(host, "OVERLAY", C_GREEN); h:SetPoint(anchor, rel, anchor); h:SetSize(B, 2)
+    local v = Chrome:Texture(host, "OVERLAY", C_GREEN); v:SetPoint(anchor, rel, anchor); v:SetSize(2, B)
 end
 
 -- ============================================================
@@ -135,9 +146,9 @@ local function AcquireRow(parent, panelW)
         row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 
         -- separator on bg child
-        local bgChild = MakeBgChild(row, C_BORDER[1], C_BORDER[2], C_BORDER[3], 0)
+        local bgChild = MakeBgChild(row, C_BORDER, 0)
         local sep = bgChild:CreateTexture(nil, "BACKGROUND")
-        sep:SetColorTexture(C_BORDER[1], C_BORDER[2], C_BORDER[3], 0.3)
+        Paint(sep, C_BORDER, 0.3)
         sep:SetHeight(1)
         sep:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT")
         sep:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT")
@@ -148,15 +159,15 @@ local function AcquireRow(parent, panelW)
         row.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
 
         row.name = row:CreateFontString(nil, "OVERLAY")
-        row.name:SetFont("Fonts\\FRIZQT__.TTF", 10, "")
-        row.name:SetTextColor(C_TEXT[1], C_TEXT[2], C_TEXT[3], 1)
+        Chrome:SetFont(row.name, 10, "")
+        Ink(row.name, C_TEXT)
         row.name:SetPoint("LEFT", row.icon, "RIGHT", 4, 0)
         row.name:SetJustifyH("LEFT")
         row.name:SetWordWrap(false)
 
         row.value = row:CreateFontString(nil, "OVERLAY")
-        row.value:SetFont("Fonts\\FRIZQT__.TTF", 10, "")
-        row.value:SetTextColor(C_TEXT[1], C_TEXT[2], C_TEXT[3], 1)
+        Chrome:SetFont(row.value, 10, "")
+        Ink(row.value, C_TEXT)
         row.value:SetPoint("RIGHT", row, "RIGHT", -PAD, 0)
         row.value:SetJustifyH("RIGHT")
     end
@@ -204,13 +215,13 @@ local function BuildBar()
     LoadPos("barPos", bar, "CENTER", 0, -300)
 
     -- bg on child so BACKGROUND doesn't block bar FontStrings
-    MakeBgChild(bar, C_BG[1], C_BG[2], C_BG[3], C_BG[4])
+    MakeBgChild(bar, C_BG)
     AddBorder(bar)
     AddCornerAccents(bar)
 
     local dot = bar:CreateTexture(nil, "OVERLAY")
     dot:SetSize(6, 6)
-    dot:SetColorTexture(C_GREEN[1], C_GREEN[2], C_GREEN[3], 1)
+    Paint(dot, C_GREEN)
     dot:SetPoint("LEFT", bar, "LEFT", PAD, 0)
     bar.dot = dot
     dot:Hide()
@@ -220,8 +231,8 @@ local function BuildBar()
     expandBtn:SetSize(20, BAR_H)
     expandBtn:SetPoint("RIGHT", bar, "RIGHT", 0, 0)
     local expandTex = expandBtn:CreateFontString(nil, "OVERLAY")
-    expandTex:SetFont("Fonts\\FRIZQT__.TTF", 14, "")
-    expandTex:SetTextColor(C_GREEN[1], C_GREEN[2], C_GREEN[3], 1)
+    Chrome:SetFont(expandTex, 14, "")
+    Ink(expandTex, C_GREEN)
     expandTex:SetAllPoints()
     expandTex:SetJustifyH("CENTER"); expandTex:SetJustifyV("MIDDLE")
     expandTex:SetText("+")
@@ -231,7 +242,7 @@ local function BuildBar()
     end)
     expandBtn:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:AddLine("|cff4FC778Wick's Ledger|r")
+        GameTooltip:AddLine(Chrome:TitleMarkup("Wick's Ledger"))
         GameTooltip:AddLine("Open itemized breakdown", 1, 1, 1)
         GameTooltip:Show()
     end)
@@ -258,7 +269,7 @@ local function BuildBar()
         else
             ssIcon:SetTexture(ICO_PLAY)
             ssIcon:SetTexCoord(0, 1, 0, 1)
-            ssIcon:SetVertexColor(C_GREEN[1], C_GREEN[2], C_GREEN[3], 1)
+            Tint(ssIcon, C_GREEN)
         end
     end
     bar.UpdateSSBtn = UpdateSSBtn
@@ -278,8 +289,8 @@ local function BuildBar()
     ssBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
     statusText = bar:CreateFontString(nil, "OVERLAY")
-    statusText:SetFont("Fonts\\FRIZQT__.TTF", 12, "")
-    statusText:SetTextColor(C_TEXT[1], C_TEXT[2], C_TEXT[3], 1)
+    Chrome:SetFont(statusText, 12, "")
+    Ink(statusText, C_TEXT)
     statusText:SetPoint("LEFT",  bar, "TOPLEFT", PAD + 10, -BAR_H / 2)
     statusText:SetPoint("RIGHT", ssBtn, "LEFT", -4, 0)
     statusText:SetJustifyH("LEFT")
@@ -339,32 +350,22 @@ local function BuildPanel()
     LoadSize("panelSize", panel, PANEL_W_DEF, 300)
     LoadPos("panelPos", panel, "CENTER", 0, -100)
 
-    MakeBgChild(panel, C_BG[1], C_BG[2], C_BG[3], C_BG[4])
+    MakeBgChild(panel, C_BG)
     AddBorder(panel)
 
     -- Header
     local header = CreateFrame("Frame", nil, panel)
     header:SetHeight(HEADER_H)
     header:SetPoint("TOPLEFT"); header:SetPoint("TOPRIGHT")
-    MakeBgChild(header, C_HEADER[1], C_HEADER[2], C_HEADER[3], 1)
+    MakeBgChild(header, C_HEADER)
     local hsep = header:CreateTexture(nil, "BORDER")
-    hsep:SetColorTexture(C_BORDER[1], C_BORDER[2], C_BORDER[3], 1)
+    Paint(hsep, C_BORDER)
     hsep:SetHeight(1); hsep:SetPoint("BOTTOMLEFT"); hsep:SetPoint("BOTTOMRIGHT")
-    do
-        local function panelBrk(anchor)
-            local h = header:CreateTexture(nil, "OVERLAY")
-            h:SetColorTexture(C_GREEN[1], C_GREEN[2], C_GREEN[3], 1)
-            h:SetPoint(anchor, panel, anchor); h:SetSize(10, 2)
-            local v = header:CreateTexture(nil, "OVERLAY")
-            v:SetColorTexture(C_GREEN[1], C_GREEN[2], C_GREEN[3], 1)
-            v:SetPoint(anchor, panel, anchor); v:SetSize(2, 10)
-        end
-        panelBrk("TOPLEFT"); panelBrk("TOPRIGHT")
-    end
+    Bracket(header, "TOPLEFT", panel); Bracket(header, "TOPRIGHT", panel)
 
     local title = header:CreateFontString(nil, "OVERLAY")
-    title:SetFont("Fonts\\FRIZQT__.TTF", 11, "")
-    title:SetTextColor(C_GREEN[1], C_GREEN[2], C_GREEN[3], 1)
+    Chrome:SetFont(title, 11, "")
+    Ink(title, C_GREEN)
     title:SetPoint("LEFT", header, "TOPLEFT", PAD, -HEADER_H / 2)
     title:SetText("Wick's Ledger")
 
@@ -372,8 +373,8 @@ local function BuildPanel()
     closeBtn:SetSize(HEADER_H, HEADER_H)
     closeBtn:SetPoint("RIGHT", header, "TOPRIGHT", 0, -HEADER_H / 2)
     local closeTex = closeBtn:CreateFontString(nil, "OVERLAY")
-    closeTex:SetFont("Fonts\\FRIZQT__.TTF", 14, "")
-    closeTex:SetTextColor(C_DIM[1], C_DIM[2], C_DIM[3], 1)
+    Chrome:SetFont(closeTex, 14, "")
+    Ink(closeTex, C_DIM)
     closeTex:SetAllPoints(); closeTex:SetJustifyH("CENTER"); closeTex:SetJustifyV("MIDDLE")
     closeTex:SetText("x")
     closeBtn:SetScript("OnClick", function() UI:ClosePanel() end)
@@ -384,16 +385,16 @@ local function BuildPanel()
     local gearIcon = gearBtn:CreateTexture(nil, "ARTWORK")
     gearIcon:SetAllPoints()
     gearIcon:SetTexture("Interface\\Buttons\\UI-OptionsButton")
-    gearIcon:SetVertexColor(C_DIM[1], C_DIM[2], C_DIM[3], 1)
+    Tint(gearIcon, C_DIM)
     gearBtn:SetScript("OnClick", function() UI:ToggleOptions() end)
     gearBtn:SetScript("OnEnter", function(self)
-        gearIcon:SetVertexColor(C_GREEN[1], C_GREEN[2], C_GREEN[3], 1)
+        Tint(gearIcon, C_GREEN)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
         GameTooltip:AddLine("Options", 1, 1, 1)
         GameTooltip:Show()
     end)
     gearBtn:SetScript("OnLeave", function()
-        gearIcon:SetVertexColor(C_DIM[1], C_DIM[2], C_DIM[3], 1)
+        Tint(gearIcon, C_DIM)
         GameTooltip:Hide()
     end)
 
@@ -402,9 +403,9 @@ local function BuildPanel()
     tabStrip:SetHeight(TAB_H)
     tabStrip:SetPoint("TOPLEFT",  panel, "TOPLEFT",  1, -HEADER_H)
     tabStrip:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -1, -HEADER_H)
-    MakeBgChild(tabStrip, C_HEADER[1], C_HEADER[2], C_HEADER[3], 0.7)
+    MakeBgChild(tabStrip, C_HEADER, 0.7)
     local tabsep = tabStrip:CreateTexture(nil, "BORDER")
-    tabsep:SetColorTexture(C_BORDER[1], C_BORDER[2], C_BORDER[3], 1)
+    Paint(tabsep, C_BORDER)
     tabsep:SetHeight(1); tabsep:SetPoint("BOTTOMLEFT"); tabsep:SetPoint("BOTTOMRIGHT")
 
     local activeTab = "session"
@@ -414,7 +415,7 @@ local function BuildPanel()
         btn:SetSize(70, TAB_H)
         btn:SetPoint("LEFT", tabStrip, "LEFT", xOff, 0)
         local fs = btn:CreateFontString(nil, "OVERLAY")
-        fs:SetFont("Fonts\\FRIZQT__.TTF", 9, "")
+        Chrome:SetFont(fs, 9, "")
         fs:SetAllPoints(); fs:SetJustifyH("CENTER"); fs:SetJustifyV("MIDDLE")
         fs.key = key
         btn._label = fs
@@ -426,11 +427,11 @@ local function BuildPanel()
 
     local function RefreshTabs()
         if activeTab == "session" then
-            sessionFS:SetTextColor(C_GREEN[1], C_GREEN[2], C_GREEN[3], 1)
-            historyFS:SetTextColor(C_DIM[1], C_DIM[2], C_DIM[3], 1)
+            Ink(sessionFS, C_GREEN)
+            Ink(historyFS, C_DIM)
         else
-            sessionFS:SetTextColor(C_DIM[1], C_DIM[2], C_DIM[3], 1)
-            historyFS:SetTextColor(C_GREEN[1], C_GREEN[2], C_GREEN[3], 1)
+            Ink(sessionFS, C_DIM)
+            Ink(historyFS, C_GREEN)
         end
         sessionFS:SetText("Session")
         historyFS:SetText("History")
@@ -474,47 +475,33 @@ local function BuildPanel()
     local footer = CreateFrame("Frame", nil, panel)
     footer:SetHeight(FOOTER_H)
     footer:SetPoint("BOTTOMLEFT"); footer:SetPoint("BOTTOMRIGHT")
-    MakeBgChild(footer, C_HEADER[1], C_HEADER[2], C_HEADER[3], 1)
+    MakeBgChild(footer, C_HEADER)
     local ftop = footer:CreateTexture(nil, "BORDER")
-    ftop:SetColorTexture(C_BORDER[1], C_BORDER[2], C_BORDER[3], 1)
+    Paint(ftop, C_BORDER)
     ftop:SetHeight(1); ftop:SetPoint("TOPLEFT"); ftop:SetPoint("TOPRIGHT")
     panel.footer = footer
 
     local totalLabel = footer:CreateFontString(nil, "OVERLAY")
-    totalLabel:SetFont("Fonts\\FRIZQT__.TTF", 10, "")
-    totalLabel:SetTextColor(C_DIM[1], C_DIM[2], C_DIM[3], 1)
+    Chrome:SetFont(totalLabel, 10, "")
+    Ink(totalLabel, C_DIM)
     totalLabel:SetPoint("LEFT", footer, "TOPLEFT", PAD, -FOOTER_H / 2)
     totalLabel:SetText("Total")
     panel.totalLabel = totalLabel
 
     local totalValue = footer:CreateFontString(nil, "OVERLAY")
-    totalValue:SetFont("Fonts\\FRIZQT__.TTF", 11, "")
-    totalValue:SetTextColor(C_TEXT[1], C_TEXT[2], C_TEXT[3], 1)
+    Chrome:SetFont(totalValue, 11, "")
+    Ink(totalValue, C_TEXT)
     totalValue:SetPoint("RIGHT", footer, "TOPRIGHT", -PAD, -FOOTER_H / 2)
     totalValue:SetJustifyH("RIGHT")
     panel.totalValue = totalValue
-    do
-        local h = footer:CreateTexture(nil, "OVERLAY")
-        h:SetColorTexture(C_GREEN[1], C_GREEN[2], C_GREEN[3], 1)
-        h:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT"); h:SetSize(10, 2)
-        local v = footer:CreateTexture(nil, "OVERLAY")
-        v:SetColorTexture(C_GREEN[1], C_GREEN[2], C_GREEN[3], 1)
-        v:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT"); v:SetSize(2, 10)
-    end
+    Bracket(footer, "BOTTOMLEFT", panel)
 
     -- Resize grip
     local grip = CreateFrame("Frame", nil, panel)
     grip:SetSize(12, 12)
     grip:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", 0, 0)
     grip:EnableMouse(true)
-    do
-        local h = grip:CreateTexture(nil, "OVERLAY")
-        h:SetColorTexture(C_GREEN[1], C_GREEN[2], C_GREEN[3], 1)
-        h:SetPoint("BOTTOMRIGHT", grip, "BOTTOMRIGHT"); h:SetSize(10, 2)
-        local v = grip:CreateTexture(nil, "OVERLAY")
-        v:SetColorTexture(C_GREEN[1], C_GREEN[2], C_GREEN[3], 1)
-        v:SetPoint("BOTTOMRIGHT", grip, "BOTTOMRIGHT"); v:SetSize(2, 10)
-    end
+    Bracket(grip, "BOTTOMRIGHT", grip)
     grip:SetScript("OnMouseDown", function(self, btn)
         if btn ~= "LeftButton" then return end
         -- Pin TOPLEFT so the frame doesn't jump when sizing starts
@@ -572,34 +559,23 @@ local function BuildOptions()
     LoadPos("optPos", optPanel, "CENTER", 100, 0)
 
     -- bg child so FontStrings on optPanel are visible
-    MakeBgChild(optPanel, C_BG[1], C_BG[2], C_BG[3], 0.98)
+    MakeBgChild(optPanel, C_BG, 0.98)
     AddBorder(optPanel)
 
     -- Header: bg child on a header sub-frame
     local header = CreateFrame("Frame", nil, optPanel)
     header:SetHeight(HEADER_H)
     header:SetPoint("TOPLEFT"); header:SetPoint("TOPRIGHT")
-    MakeBgChild(header, C_HEADER[1], C_HEADER[2], C_HEADER[3], 1)
+    MakeBgChild(header, C_HEADER)
     local hsep = header:CreateTexture(nil, "BORDER")
-    hsep:SetColorTexture(C_BORDER[1], C_BORDER[2], C_BORDER[3], 1)
+    Paint(hsep, C_BORDER)
     hsep:SetHeight(1); hsep:SetPoint("BOTTOMLEFT"); hsep:SetPoint("BOTTOMRIGHT")
     -- All 4 brackets on the header anchored to optPanel corners
-    do
-        local function optBrk(anchor)
-            local h = header:CreateTexture(nil, "OVERLAY")
-            h:SetColorTexture(C_GREEN[1], C_GREEN[2], C_GREEN[3], 1)
-            h:SetPoint(anchor, optPanel, anchor); h:SetSize(10, 2)
-            local v = header:CreateTexture(nil, "OVERLAY")
-            v:SetColorTexture(C_GREEN[1], C_GREEN[2], C_GREEN[3], 1)
-            v:SetPoint(anchor, optPanel, anchor); v:SetSize(2, 10)
-        end
-        optBrk("TOPLEFT"); optBrk("TOPRIGHT")
-        optBrk("BOTTOMLEFT"); optBrk("BOTTOMRIGHT")
-    end
+    for _, corner in ipairs({ "TOPLEFT", "TOPRIGHT", "BOTTOMLEFT", "BOTTOMRIGHT" }) do Bracket(header, corner, optPanel) end
 
     local title = header:CreateFontString(nil, "OVERLAY")
-    title:SetFont("Fonts\\FRIZQT__.TTF", 11, "")
-    title:SetTextColor(C_GREEN[1], C_GREEN[2], C_GREEN[3], 1)
+    Chrome:SetFont(title, 11, "")
+    Ink(title, C_GREEN)
     title:SetPoint("LEFT", header, "TOPLEFT", PAD, -HEADER_H / 2)
     title:SetText("Options")
 
@@ -607,16 +583,16 @@ local function BuildOptions()
     closeBtn:SetSize(HEADER_H, HEADER_H)
     closeBtn:SetPoint("RIGHT", header, "TOPRIGHT", 0, -HEADER_H / 2)
     local closeTex = closeBtn:CreateFontString(nil, "OVERLAY")
-    closeTex:SetFont("Fonts\\FRIZQT__.TTF", 14, "")
-    closeTex:SetTextColor(C_DIM[1], C_DIM[2], C_DIM[3], 1)
+    Chrome:SetFont(closeTex, 14, "")
+    Ink(closeTex, C_DIM)
     closeTex:SetAllPoints(); closeTex:SetJustifyH("CENTER"); closeTex:SetJustifyV("MIDDLE")
     closeTex:SetText("x")
     closeBtn:SetScript("OnClick", function() optPanel:Hide() end)
 
     -- ---- Price source section ----
     local srcLabel = optPanel:CreateFontString(nil, "OVERLAY")
-    srcLabel:SetFont("Fonts\\FRIZQT__.TTF", 9, "")
-    srcLabel:SetTextColor(C_DIM[1], C_DIM[2], C_DIM[3], 1)
+    Chrome:SetFont(srcLabel, 9, "")
+    Ink(srcLabel, C_DIM)
     srcLabel:SetPoint("TOPLEFT", optPanel, "TOPLEFT", PAD, -(HEADER_H + 10))
     srcLabel:SetText("PRICE SOURCE")
 
@@ -635,14 +611,8 @@ local function BuildOptions()
         local cur = WL.db and WL.db.priceSource or "auto"
         for _, rf in ipairs(radioFrames) do
             local sel = (rf.src == cur)
-            rf.dot:SetVertexColor(
-                sel and C_GREEN[1] or C_DIM[1],
-                sel and C_GREEN[2] or C_DIM[2],
-                sel and C_GREEN[3] or C_DIM[3], 1)
-            rf.lbl:SetTextColor(
-                sel and C_TEXT[1] or C_DIM[1],
-                sel and C_TEXT[2] or C_DIM[2],
-                sel and C_TEXT[3] or C_DIM[3], 1)
+            Tint(rf.dot, sel and C_GREEN or C_DIM)
+            Ink(rf.lbl, sel and C_TEXT or C_DIM)
         end
     end
 
@@ -656,13 +626,13 @@ local function BuildOptions()
 
         local dot = rf:CreateTexture(nil, "ARTWORK")
         dot:SetSize(7, 7)
-        dot:SetColorTexture(C_DIM[1], C_DIM[2], C_DIM[3], 1)
+        Paint(dot, C_DIM)
         dot:SetPoint("LEFT", rf, "LEFT", 0, 0)
         rf.dot = dot
 
         local lbl = rf:CreateFontString(nil, "OVERLAY")
-        lbl:SetFont("Fonts\\FRIZQT__.TTF", 10, "")
-        lbl:SetTextColor(C_DIM[1], C_DIM[2], C_DIM[3], 1)
+        Chrome:SetFont(lbl, 10, "")
+        Ink(lbl, C_DIM)
         lbl:SetPoint("LEFT", dot, "RIGHT", 6, 0)
         lbl:SetText(SOURCE_LABELS[src])
         rf.lbl = lbl
@@ -677,7 +647,7 @@ local function BuildOptions()
     -- Divider
     local divY = HEADER_H + 22 + #SOURCES * ROW_Y + 6
     local div = optPanel:CreateTexture(nil, "BORDER")
-    div:SetColorTexture(C_BORDER[1], C_BORDER[2], C_BORDER[3], 0.5)
+    Paint(div, C_BORDER, 0.5)
     div:SetHeight(1)
     div:SetPoint("TOPLEFT",  optPanel, "TOPLEFT",  PAD,  -divY)
     div:SetPoint("TOPRIGHT", optPanel, "TOPRIGHT", -PAD, -divY)
@@ -695,21 +665,15 @@ local function BuildOptions()
     autoBtn.dot = autoDot
 
     local autoLbl = autoBtn:CreateFontString(nil, "OVERLAY")
-    autoLbl:SetFont("Fonts\\FRIZQT__.TTF", 10, "")
+    Chrome:SetFont(autoLbl, 10, "")
     autoLbl:SetPoint("LEFT", autoDot, "RIGHT", 6, 0)
     autoLbl:SetText("Auto-start on instance entry")
     autoBtn.lbl = autoLbl
 
     local function RefreshAutoBtn()
         local on = WL.db and WL.db.autoMode
-        autoDot:SetVertexColor(
-            on and C_GREEN[1] or C_DIM[1],
-            on and C_GREEN[2] or C_DIM[2],
-            on and C_GREEN[3] or C_DIM[3], 1)
-        autoLbl:SetTextColor(
-            on and C_TEXT[1] or C_DIM[1],
-            on and C_TEXT[2] or C_DIM[2],
-            on and C_TEXT[3] or C_DIM[3], 1)
+        Tint(autoDot, on and C_GREEN or C_DIM)
+        Ink(autoLbl, on and C_TEXT or C_DIM)
     end
 
     autoBtn:SetScript("OnClick", function()
@@ -730,21 +694,15 @@ local function BuildOptions()
     hardBtn.dot = hardDot
 
     local hardLbl = hardBtn:CreateFontString(nil, "OVERLAY")
-    hardLbl:SetFont("Fonts\\FRIZQT__.TTF", 10, "")
+    Chrome:SetFont(hardLbl, 10, "")
     hardLbl:SetPoint("LEFT", hardDot, "RIGHT", 6, 0)
     hardLbl:SetText("Hard lock  (persist across resets)")
     hardBtn.lbl = hardLbl
 
     local function RefreshHardBtn()
         local on = WL.db and WL.db.hardLock
-        hardDot:SetVertexColor(
-            on and C_GREEN[1] or C_DIM[1],
-            on and C_GREEN[2] or C_DIM[2],
-            on and C_GREEN[3] or C_DIM[3], 1)
-        hardLbl:SetTextColor(
-            on and C_TEXT[1] or C_DIM[1],
-            on and C_TEXT[2] or C_DIM[2],
-            on and C_TEXT[3] or C_DIM[3], 1)
+        Tint(hardDot, on and C_GREEN or C_DIM)
+        Ink(hardLbl, on and C_TEXT or C_DIM)
     end
 
     hardBtn:SetScript("OnClick", function()
@@ -763,7 +721,7 @@ local function BuildOptions()
     -- Divider 2
     local div2Y = hardY + ROW_Y + 6
     local div2 = optPanel:CreateTexture(nil, "BORDER")
-    div2:SetColorTexture(C_BORDER[1], C_BORDER[2], C_BORDER[3], 0.5)
+    Paint(div2, C_BORDER, 0.5)
     div2:SetHeight(1)
     div2:SetPoint("TOPLEFT",  optPanel, "TOPLEFT",  PAD,  -div2Y)
     div2:SetPoint("TOPRIGHT", optPanel, "TOPRIGHT", -PAD, -div2Y)
@@ -776,7 +734,7 @@ local function BuildOptions()
     resetBtn:SetPoint("TOPRIGHT", optPanel, "TOPRIGHT", -PAD, -resetY)
 
     local resetTex = resetBtn:CreateFontString(nil, "OVERLAY")
-    resetTex:SetFont("Fonts\\FRIZQT__.TTF", 10, "")
+    Chrome:SetFont(resetTex, 10, "")
     resetTex:SetTextColor(1, 0.4, 0.4, 1)
     resetTex:SetPoint("LEFT", resetBtn, "LEFT", 0, 0)
     resetTex:SetText("Reset session")
@@ -823,7 +781,7 @@ local function BuildContextMenu()
     ctxMenu:SetFrameStrata("TOOLTIP")
     ctxMenu:SetClampedToScreen(true)
     ctxMenu:EnableMouse(true)
-    MakeBgChild(ctxMenu, C_BG[1], C_BG[2], C_BG[3], 0.98)
+    MakeBgChild(ctxMenu, C_BG, 0.98)
     AddBorder(ctxMenu)
     ctxMenu:Hide()
     ctxMenu:SetScript("OnLeave", function() ctxMenu:Hide() end)
@@ -846,12 +804,12 @@ local function ShowContextMenu(x, y, items)
         btn:SetSize(menuW - 8, ITEM_H)
         btn:SetPoint("TOPLEFT", ctxMenu, "TOPLEFT", 4, yOff)
         local lbl = btn:CreateFontString(nil, "OVERLAY")
-        lbl:SetFont("Fonts\\FRIZQT__.TTF", 10, "")
-        lbl:SetTextColor(C_TEXT[1], C_TEXT[2], C_TEXT[3], 1)
+        Chrome:SetFont(lbl, 10, "")
+        Ink(lbl, C_TEXT)
         lbl:SetAllPoints(); lbl:SetJustifyH("LEFT"); lbl:SetJustifyV("MIDDLE")
         lbl:SetText(item.label)
-        btn:SetScript("OnEnter", function() lbl:SetTextColor(C_GREEN[1], C_GREEN[2], C_GREEN[3], 1) end)
-        btn:SetScript("OnLeave", function() lbl:SetTextColor(C_TEXT[1], C_TEXT[2], C_TEXT[3], 1) end)
+        btn:SetScript("OnEnter", function() Ink(lbl, C_GREEN) end)
+        btn:SetScript("OnLeave", function() Ink(lbl, C_TEXT) end)
         btn:SetScript("OnClick", function()
             ctxMenu:Hide()
             if item.onClick then item.onClick() end
@@ -887,8 +845,8 @@ PopulateHistory = function()
         row:SetPoint("TOPLEFT",  content, "TOPLEFT",  0, -y)
         row:SetPoint("TOPRIGHT", content, "TOPRIGHT", 0, -y)
         row.icon:SetTexture(nil)
-        row.name:SetFont("Fonts\\FRIZQT__.TTF", 10, "")
-        row.name:SetTextColor(C_DIM[1], C_DIM[2], C_DIM[3], 1)
+        Chrome:SetFont(row.name, 10, "")
+        Ink(row.name, C_DIM)
         row.name:SetText("No past sessions yet")
         row.value:SetText("")
         y = y + ROW_H
@@ -902,16 +860,16 @@ PopulateHistory = function()
             hdr:SetPoint("TOPLEFT",  content, "TOPLEFT",  0, -y)
             hdr:SetPoint("TOPRIGHT", content, "TOPRIGHT", 0, -y)
             hdr.icon:SetTexture(nil)
-            hdr.name:SetFont("Fonts\\FRIZQT__.TTF", 9, "")
-            hdr.name:SetTextColor(C_DIM[1], C_DIM[2], C_DIM[3], 1)
+            Chrome:SetFont(hdr.name, 9, "")
+            Ink(hdr.name, C_DIM)
             hdr.name:SetText(string.format("#%d  %s  %s", i, dateStr, zone))
             -- elapsed + total on right
             local elapsed = entry.elapsed or 0
             local h = math.floor(elapsed / 3600)
             local m = math.floor((elapsed % 3600) / 60)
             local timeStr = h > 0 and string.format("%dh%dm", h, m) or string.format("%dm", m)
-            hdr.value:SetFont("Fonts\\FRIZQT__.TTF", 9, "")
-            hdr.value:SetTextColor(C_DIM[1], C_DIM[2], C_DIM[3], 1)
+            Chrome:SetFont(hdr.value, 9, "")
+            Ink(hdr.value, C_DIM)
             hdr.value:SetText(timeStr)
             y = y + ROW_H
 
@@ -922,16 +880,16 @@ PopulateHistory = function()
             totalRow:SetPoint("TOPRIGHT", content, "TOPRIGHT", 0, -y)
             totalRow.icon:SetTexture("Interface\\MoneyFrame\\UI-GoldIcon")
             totalRow.icon:SetTexCoord(0, 1, 0, 1)
-            totalRow.name:SetFont("Fonts\\FRIZQT__.TTF", 10, "")
-            totalRow.name:SetTextColor(C_TEXT[1], C_TEXT[2], C_TEXT[3], 1)
+            Chrome:SetFont(totalRow.name, 10, "")
+            Ink(totalRow.name, C_TEXT)
             totalRow.name:SetText("Total earned")
             local hrFactor = (elapsed > 60) and (3600 / elapsed) or 0
             local totalStr = P and P:FormatCopper(entry.totalCopper or 0) or "?"
             if hrFactor > 0 and P then
                 totalStr = totalStr .. "  |cff888888(" .. P:FormatGold((entry.totalCopper or 0) * hrFactor) .. "/hr)|r"
             end
-            totalRow.value:SetFont("Fonts\\FRIZQT__.TTF", 10, "")
-            totalRow.value:SetTextColor(C_TEXT[1], C_TEXT[2], C_TEXT[3], 1)
+            Chrome:SetFont(totalRow.value, 10, "")
+            Ink(totalRow.value, C_TEXT)
             totalRow.value:SetText(totalStr)
             y = y + ROW_H
 
@@ -978,8 +936,8 @@ PopulatePanel = function()
         row:SetPoint("TOPLEFT",  content, "TOPLEFT",  0, -y)
         row:SetPoint("TOPRIGHT", content, "TOPRIGHT", 0, -y)
         row.icon:SetTexture(nil)
-        row.name:SetFont("Fonts\\FRIZQT__.TTF", 9, "")
-        row.name:SetTextColor(C_DIM[1], C_DIM[2], C_DIM[3], 1)
+        Chrome:SetFont(row.name, 9, "")
+        Ink(row.name, C_DIM)
         row.name:SetText(txt)
         row.value:SetText("")
         y = y + ROW_H
@@ -993,8 +951,8 @@ PopulatePanel = function()
     goldRow:SetPoint("TOPRIGHT", content, "TOPRIGHT", 0, -y)
     goldRow.icon:SetTexture("Interface\\MoneyFrame\\UI-GoldIcon")
     goldRow.icon:SetTexCoord(0, 1, 0, 1)
-    goldRow.name:SetFont("Fonts\\FRIZQT__.TTF", 10, "")
-    goldRow.name:SetTextColor(C_TEXT[1], C_TEXT[2], C_TEXT[3], 1)
+    Chrome:SetFont(goldRow.name, 10, "")
+    Ink(goldRow.name, C_TEXT)
     goldRow.name:SetText("Raw gold")
     goldRow.value:SetText(P:FormatCopper(S.goldDelta))
     y = y + ROW_H
@@ -1016,8 +974,8 @@ PopulatePanel = function()
             table.insert(activeRows, row)
             row:SetPoint("TOPLEFT",  content, "TOPLEFT",  0, -y)
             row:SetPoint("TOPRIGHT", content, "TOPRIGHT", 0, -y)
-            row.name:SetFont("Fonts\\FRIZQT__.TTF", 10, "")
-            row.name:SetTextColor(C_TEXT[1], C_TEXT[2], C_TEXT[3], 1)
+            Chrome:SetFont(row.name, 10, "")
+            Ink(row.name, C_TEXT)
 
             if entry.icon then
                 row.icon:SetTexture(entry.icon)
@@ -1079,8 +1037,8 @@ PopulatePanel = function()
             table.insert(activeRows, row)
             row:SetPoint("TOPLEFT",  content, "TOPLEFT",  0, -y)
             row:SetPoint("TOPRIGHT", content, "TOPRIGHT", 0, -y)
-            row.name:SetFont("Fonts\\FRIZQT__.TTF", 10, "")
-            row.name:SetTextColor(C_DIM[1], C_DIM[2], C_DIM[3], 1)
+            Chrome:SetFont(row.name, 10, "")
+            Ink(row.name, C_DIM)
             row.icon:SetTexture("Interface\\Icons\\INV_Misc_Bag_07")
             row.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
             local nameStr = "Junk"
@@ -1088,8 +1046,8 @@ PopulatePanel = function()
                 nameStr = nameStr .. " |cff888888x" .. junk.count .. "|r"
             end
             row.name:SetText(nameStr)
-            row.value:SetFont("Fonts\\FRIZQT__.TTF", 10, "")
-            row.value:SetTextColor(C_DIM[1], C_DIM[2], C_DIM[3], 1)
+            Chrome:SetFont(row.value, 10, "")
+            Ink(row.value, C_DIM)
             row.value:SetText(P:FormatCopper(junk.copper) .. " |cff888888v|r")
             y = y + ROW_H
         end
@@ -1104,8 +1062,8 @@ PopulatePanel = function()
         xpRow:SetPoint("TOPRIGHT", content, "TOPRIGHT", 0, -y)
         xpRow.icon:SetTexture("Interface\\Icons\\Spell_Holy_BorrowedTime")
         xpRow.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
-        xpRow.name:SetFont("Fonts\\FRIZQT__.TTF", 10, "")
-        xpRow.name:SetTextColor(C_TEXT[1], C_TEXT[2], C_TEXT[3], 1)
+        Chrome:SetFont(xpRow.name, 10, "")
+        Ink(xpRow.name, C_TEXT)
         xpRow.name:SetText("Experience")
         local xpStr = FormatXP(S.xpDelta or 0) .. " XP"
         if hrFactor > 0 then
@@ -1128,8 +1086,8 @@ PopulatePanel = function()
             row:SetPoint("TOPRIGHT", content, "TOPRIGHT", 0, -y)
             row.icon:SetTexture("Interface\\Icons\\Spell_Holy_PrayerofSpirit")
             row.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
-            row.name:SetFont("Fonts\\FRIZQT__.TTF", 10, "")
-            row.name:SetTextColor(C_TEXT[1], C_TEXT[2], C_TEXT[3], 1)
+            Chrome:SetFont(row.name, 10, "")
+            Ink(row.name, C_TEXT)
             row.name:SetText(data.name or "?")
             local repStr = (data.delta or 0) .. " rep"
             if hrFactor > 0 then

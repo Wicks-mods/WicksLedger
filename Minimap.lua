@@ -2,12 +2,15 @@
 -- Minimap.lua: draggable minimap toggle button
 
 local ADDON, ns = ...
+if not WickCore then return end   -- said once in Core.lua
 local WL = WicksLedger
 WL.Minimap = WL.Minimap or {}
 local M = WL.Minimap
 
-local C_GREEN = { 0.310, 0.780, 0.471, 1 }
-local C_VOID  = { 0.051, 0.039, 0.078, 1 }
+-- Palette tokens by reference, so the button follows a theme change.
+local Chrome  = WickCore.Chrome
+local C_GREEN = Chrome.Colors.fel
+local C_VOID  = Chrome.Colors.void
 
 function M:OnLogin()
     if M.button then return end
@@ -25,10 +28,12 @@ function M:OnLogin()
     bg:SetSize(24, 24)
     bg:SetPoint("CENTER")
     bg:SetVertexColor(C_VOID[1], C_VOID[2], C_VOID[3], 0.97)
+    Chrome:Register(bg, C_VOID, "vertex", 0.97)
 
     local glyph = btn:CreateFontString(nil, "ARTWORK")
-    glyph:SetFont("Fonts\\FRIZQT__.TTF", 13, "OUTLINE")
+    Chrome:SetFont(glyph, 13, "OUTLINE")
     glyph:SetTextColor(C_GREEN[1], C_GREEN[2], C_GREEN[3])
+    Chrome:Register(glyph, C_GREEN, "text")
     glyph:SetText("LE")
     glyph:SetPoint("CENTER", 0, 0)
     btn.glyph = glyph
@@ -40,7 +45,7 @@ function M:OnLogin()
 
     btn:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-        GameTooltip:AddLine("|cff4FC778Wick's Ledger|r")
+        GameTooltip:AddLine(Chrome:TitleMarkup("Wick's Ledger"))
         GameTooltip:AddLine("Session earnings tracker", 1, 1, 1)
         GameTooltip:AddLine(" ")
         GameTooltip:AddLine("|cffaaaaaaLeft-click:|r toggle panel")

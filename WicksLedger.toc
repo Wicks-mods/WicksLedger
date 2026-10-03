@@ -5,6 +5,7 @@
 ## Version: 0.2.6
 ## SavedVariables: WicksLedgerDB
 ## SavedVariablesPerCharacter: WicksLedgerCharDB
+## OptionalDeps: WickCore
 
 Core.lua
 Prices.lua
