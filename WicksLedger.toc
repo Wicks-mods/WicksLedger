@@ -2,7 +2,7 @@
 ## Title: Wick's Ledger
 ## Notes: session earnings tracker -- loot, raw gold, and ah-valued item drops in one slim panel
 ## Author: Wick
-## Version: 0.2.6
+## Version: 0.3.0
 ## SavedVariables: WicksLedgerDB
 ## SavedVariablesPerCharacter: WicksLedgerCharDB
 ## OptionalDeps: WickCore

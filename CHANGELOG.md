@@ -1,6 +1,6 @@
 # Changelog -- Wick's Ledger
 
-## Unreleased
+## 0.3.0 - 2026-10-03
 
 ### Added
 
@@ -12,6 +12,10 @@
   buttons to the ledger and its settings. The suite's launcher opens the
   ledger.
 - Chat lines carry the theme's accent colour.
+- The bar, the panel and the settings window snap together as you drag
+  one near another: edge to edge, or lined up along a side. A window
+  close to its neighbour's height (side by side) or width (stacked)
+  takes it, so the pair lines up.
 
 ### Changed
 
