@@ -2,7 +2,7 @@
 ## Title: |cffD4C8A1Wick's|r |cff4FC778Ledger|r
 ## Notes: Session earnings tracker. Loot, raw gold and auction-valued drops in one slim panel.
 ## Author: Wick
-## Version: 0.3.0
+## Version: 0.3.1
 ## OptionalDeps: WickCore
 ## SavedVariables: WicksLedgerDB
 ## SavedVariablesPerCharacter: WicksLedgerCharDB
