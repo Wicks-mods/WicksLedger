@@ -1,6 +1,10 @@
 # Changelog -- Wick's Ledger
 
-## 0.3.0 - 2026-10-03
+## Unreleased
+
+- Shows in the game's addon list with an icon and the two-tone Wick title, under a Wick's Mods heading.
+
+## 0.3.0 (2026-10-03)
 
 ### Added
 
@@ -23,7 +27,7 @@
   rest of the suite. Without it the addon says so once at login and does
   nothing else. Your settings and history are untouched.
 
-## 0.2.6 - 2026-10-01
+## 0.2.6 (2026-10-01)
 
 ### Fixed
 

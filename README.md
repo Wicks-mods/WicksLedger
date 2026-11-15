@@ -1,23 +1,30 @@
+<p align="center"><img src="images/wick-thumb-ledger.png" alt="Wick's Ledger"></p>
+
 # Wick's Ledger
 
-Session earnings tracker for TBC Classic. Every loot drop valued against TSM, Auctionator, or Auctioneer -- raw gold, items, XP, and rep in one slim panel.
+<!-- wick:badges:start -->
+[![Downloads](https://img.shields.io/curseforge/dt/1542398?style=flat-square&labelColor=171124&label=downloads&color=4FC778)](https://www.curseforge.com/wow/addons/wicks-ledger)
+![TBC Anniversary](https://img.shields.io/badge/client-TBC%20Anniversary-383058?style=flat-square&labelColor=171124)
+[![License](https://img.shields.io/badge/license-MIT%20%2B%20trademark-383058?style=flat-square&labelColor=171124)](LICENSE)
+[![Discord](https://img.shields.io/badge/discord-join-4FC778?style=flat-square&labelColor=171124)](https://discord.gg/GWGTMhYBZY)
+<!-- wick:badges:end -->
 
-![Wick's Ledger](images/wick-thumb-ledger.png)
+Session earnings tracker for TBC Classic. Every loot drop valued against TSM, Auctionator, or Auctioneer, raw gold, items, XP, and rep in one slim panel.
 
 ## Features
 
-- **AH-priced loot** -- TSM, Auctionator, Auctioneer, or vendor fallback, auto-detected
-- **Auto-start on instance entry** -- sessions begin when you zone in, end when you leave
-- **Session persistence** -- survives /reload mid-dungeon; restored on login, discarded after 8 hours
-- **History tab** -- last 5 completed sessions with date, zone, duration, and total earned
-- **Gold/hr projection** -- factors in both raw gold and item value, rounded to whole gold
-- **Death-aware** -- releasing to a graveyard outside the instance doesn't end your session
+- **AH-priced loot**: TSM, Auctionator, Auctioneer, or vendor fallback, auto-detected
+- **Auto-start on instance entry**: sessions begin when you zone in, end when you leave
+- **Session persistence**: survives /reload mid-dungeon; restored on login, discarded after 8 hours
+- **History tab**: last 5 completed sessions with date, zone, duration, and total earned
+- **Gold/hr projection**: factors in both raw gold and item value, rounded to whole gold
+- **Death-aware**: releasing to a graveyard outside the instance doesn't end your session
 
 ## Usage
 
-`/wledger` -- toggle panel  
-`/wledger start` / `stop` / `reset` -- manual session control  
-`/wledger auto` -- toggle auto instance-detection
+`/wledger`: toggle panel  
+`/wledger start` / `stop` / `reset`: manual session control  
+`/wledger auto`: toggle auto instance-detection
 
 ## More from Wick
 
@@ -42,6 +49,7 @@ Session earnings tracker for TBC Classic. Every loot drop valued against TSM, Au
 | **Wick's Demons and Things** | [repo](https://github.com/Wicks-mods/WicksDemonsAndThings) | [CurseForge](https://www.curseforge.com/wow/addons/wicks-demons-and-things) |
 | **Wick's UI** | [repo](https://github.com/Wicks-mods/WicksUIForever) | [CurseForge](https://www.curseforge.com/wow/addons/wicks-ui) |
 | **Wick's Reminders** | [repo](https://github.com/Wicks-mods/WicksReminders) | [CurseForge](https://www.curseforge.com/wow/addons/wicks-reminders) |
+| **Wick's Map** | [repo](https://github.com/Wicks-mods/WicksMap) | [CurseForge](https://www.curseforge.com/wow/addons/wicks-map) |
 
 **Community:** [Discord](https://discord.gg/GWGTMhYBZY)
 <!-- wick:suite-table:end -->
